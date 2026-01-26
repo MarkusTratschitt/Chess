@@ -6,16 +6,19 @@ v-app.medieval-font
         v-col(cols="12").text-center
           h1.text-h2.text-primary.mb-4(style="font-family: 'Times New Roman', serif;") Battle Chess
           Board3D
+    BattleArena
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import Board3D from '~/components/board/Board3D.vue'
+import BattleArena from '~/components/battle/BattleArena.vue'
 
 export default defineComponent({
   name: 'IndexPage',
   components: {
-    Board3D
+    Board3D,
+    BattleArena,
   }
 })
 </script>
