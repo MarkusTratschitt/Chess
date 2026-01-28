@@ -7,6 +7,7 @@ import { defineComponent, ref, onMounted, onUnmounted, watch } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useGameStore } from '~/stores/game'
+import { zoomToBattle, resetCamera, CAMERA_DEFAULTS } from '~/utils/cameraAnimations'
 
 export default defineComponent({
   name: 'Board3D',
@@ -43,8 +44,16 @@ export default defineComponent({
       // Camera
       const aspect = container.value.clientWidth / container.value.clientHeight
       camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000)
-      camera.position.set(0, 80, 80)
-      camera.lookAt(0, 0, 0)
+      camera.position.set(
+        CAMERA_DEFAULTS.position.x,
+        CAMERA_DEFAULTS.position.y,
+        CAMERA_DEFAULTS.position.z
+      )
+      camera.lookAt(
+        CAMERA_DEFAULTS.target.x,
+        CAMERA_DEFAULTS.target.y,
+        CAMERA_DEFAULTS.target.z
+      )
 
       // Renderer
       renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -88,16 +97,16 @@ export default defineComponent({
         raycaster.setFromCamera(mouse, camera)
         const intersects = raycaster.intersectObjects(scene.children, true) // Recursive to get highlights
 
-        if (intersects.length > 0) {
-          const object = intersects[0].object
+        const firstIntersect = intersects[0]
+
+        if (firstIntersect) {
+          const object = firstIntersect.object
           const isPiece = pieceMeshes.includes(object as THREE.Mesh)
 
           if (isPiece) {
-            console.log('[Board3D] Piece clicked')
             handlePieceClick(object as THREE.Mesh)
           } else if (object.userData.type === 'square' || object.parent?.name === 'highlights') {
             // Handle both board squares and highlight meshes
-            console.log('[Board3D] Square clicked:', object.userData)
             if (object.userData.type === 'square') {
               handleSquareClick(object.userData.x, object.userData.z)
             } else if (object.parent?.name === 'highlights') {
@@ -105,7 +114,6 @@ export default defineComponent({
               const offset = (BOARD_SIZE / 2) - (SQUARE_SIZE / 2)
               const x = Math.round((object.position.x + offset) / SQUARE_SIZE)
               const z = Math.round((object.position.z + offset) / SQUARE_SIZE)
-              console.log('[Board3D] Highlight clicked at:', x, z)
               handleSquareClick(x, z)
             }
           }
@@ -216,14 +224,10 @@ export default defineComponent({
       const data = meshUserData.get(mesh)
       if (!data) return
 
-      console.log('[handlePieceClick] Piece data:', data, 'Current turn:', store.turn)
-
       if (data.color === store.turn) {
         selectedSquare.value = { x: data.x, z: data.z }
         const squareName = toSquare(data.x, data.z)
-        console.log('[handlePieceClick] Selected square:', squareName, 'at', data.x, data.z)
         const moves = store.getValidMoves(squareName as any)
-        console.log('[handlePieceClick] Valid moves:', moves)
         highlightValidMoves(moves.map(m => m.to))
       } else {
         if (selectedSquare.value) {
@@ -233,11 +237,8 @@ export default defineComponent({
     }
 
     function handleSquareClick(x: number, z: number) {
-      console.log('[handleSquareClick] Clicked square:', x, z, 'Selected square:', selectedSquare.value)
       if (selectedSquare.value) {
         attemptMove(x, z)
-      } else {
-        console.log('[handleSquareClick] No piece selected, ignoring click')
       }
     }
 
@@ -285,7 +286,7 @@ export default defineComponent({
 
       squares.forEach(sq => {
         const file = sq.charCodeAt(0) - 97
-        const rank = parseInt(sq[1])
+        const rank = parseInt(sq[1] || '0')
         const z = 8 - rank
         const x = file
 
@@ -317,6 +318,22 @@ export default defineComponent({
     // Watch for FEN changes
     watch(() => store.fen, () => {
       updatePieces()
+    })
+
+    // Watch for battle activation
+    watch(() => store.battle.isActive, (isActive) => {
+      if (isActive && store.battle.attacker && store.battle.defender) {
+        zoomToBattle(
+          camera,
+          controls,
+          store.battle.attacker.from,
+          store.battle.defender.at,
+          SQUARE_SIZE,
+          BOARD_SIZE
+        )
+      } else if (!isActive) {
+        resetCamera(camera, controls)
+      }
     })
 
     onMounted(() => {

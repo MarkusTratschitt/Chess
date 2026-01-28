@@ -60,24 +60,19 @@ export const useGameStore = defineStore('game', {
     },
 
     makeMove(move: { from: string; to: string; promotion?: string }) {
-      console.log('[makeMove] Attempting move:', move)
       try {
         // Check if this is a capture move
         const piece = this.chess.get(move.from as Square)
         const targetPiece = this.chess.get(move.to as Square)
         const isCapture = targetPiece !== null
 
-        console.log('[makeMove] Piece:', piece, 'Target:', targetPiece, 'IsCapture:', isCapture)
-
         const result = this.chess.move(move)
-        console.log('[makeMove] Move result:', result)
 
         if (result) {
           this.lastMove = result
 
           // Trigger battle if it's a capture
           if (isCapture && piece && targetPiece) {
-            console.log('[makeMove] Triggering battle')
             this.triggerBattle({
               attacker: { type: piece.type, color: piece.color, from: move.from },
               defender: { type: targetPiece.type, color: targetPiece.color, at: move.to },
@@ -85,7 +80,6 @@ export const useGameStore = defineStore('game', {
             })
           } else {
             // No battle, just update state
-            console.log('[makeMove] No battle, updating state')
             this.updateGameState()
           }
 

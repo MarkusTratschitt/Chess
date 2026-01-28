@@ -13,12 +13,17 @@ v-app.medieval-font
 import { defineComponent } from 'vue'
 import Board3D from '~/components/board/Board3D.vue'
 import BattleArena from '~/components/battle/BattleArena.vue'
+import { useGameStore } from '~/stores/game'
 
 export default defineComponent({
   name: 'IndexPage',
   components: {
     Board3D,
     BattleArena,
+  },
+  setup() {
+    const store = useGameStore()
+    return { store }
   }
 })
 </script>
